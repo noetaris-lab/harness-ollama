@@ -1,0 +1,54 @@
+{
+  "name": "@noetaris/harness-ollama",
+  "version": "0.1.0",
+  "description": "Ollama adapter for @noetaris/harness",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noetaris-lab/harness-ollama.git"
+  },
+  "homepage": "https://github.com/noetaris-lab/harness-ollama#readme",
+  "bugs": {
+    "url": "https://github.com/noetaris-lab/harness-ollama/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build && pnpm test",
+    "publish:npm": "pnpm publish --access public --no-git-checks"
+  },
+  "files": [
+    "dist"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "peerDependencies": {
+    "@noetaris/harness": ">=0.1.0",
+    "@noetaris/harness-types": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@noetaris/harness": "link:../core",
+    "@noetaris/harness-types": "link:../types",
+    "@types/node": "^25.8.0",
+    "ollama": "^0.6.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
+  }
+}
