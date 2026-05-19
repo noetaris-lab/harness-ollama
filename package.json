@@ -46,7 +46,6 @@
     "@noetaris/harness": "link:../core",
     "@noetaris/harness-types": "link:../types",
     "@types/node": "^25.8.0",
-    "ollama": "^0.6.3",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
