@@ -2,11 +2,18 @@ import type { LLM, Message, Tool, ToolCall, LLMResponse, LLMUsageEvent } from '@
 import type { ObserverAware, Observer, StepContext } from '@noetaris/harness'
 import { randomUUID } from 'node:crypto'
 
+/** Options for {@link Ollama}. */
 export interface OllamaOptions {
+  /** Base URL of the Ollama server. Defaults to `http://localhost:11434`. */
   baseUrl?: string
 }
 
+/**
+ * Thrown by {@link Ollama.invoke} when the Ollama REST API returns a non-2xx
+ * HTTP status code.
+ */
 export class OllamaApiError extends Error {
+  /** The HTTP status code returned by the Ollama server. */
   readonly status: number
 
   constructor(status: number, body: string) {
@@ -108,12 +115,30 @@ function normalizeResponse(response: OllamaResponse): LLMResponse {
 const ZEROED_STEP_CONTEXT: StepContext = { agentId: '', sessionId: '', stepName: '' }
 const DEFAULT_BASE_URL = 'http://localhost:11434'
 
+/**
+ * {@link LLM} adapter for a locally-running Ollama server (`/api/chat`).
+ *
+ * Implements {@link ObserverAware} — emits an `'llm.response'` event with an
+ * `LLMUsageEvent` payload after each successful invocation.
+ *
+ * @throws {@link OllamaApiError} when the server returns a non-2xx response.
+ *
+ * @example
+ * ```ts
+ * const llm = new Ollama('llama3.2', { baseUrl: 'http://localhost:11434' })
+ * const response = await llm.invoke(messages)
+ * ```
+ */
 export class Ollama implements LLM, ObserverAware {
   private readonly model: string
   private readonly baseUrl: string
   private observer: Observer = {}
   private stepContext: StepContext = ZEROED_STEP_CONTEXT
 
+  /**
+   * @param model - Ollama model tag, e.g. `'llama3.2'`.
+   * @param options - Optional base URL override (defaults to `http://localhost:11434`).
+   */
   constructor(model: string, options?: OllamaOptions) {
     this.model = model
     this.baseUrl = options?.baseUrl ?? DEFAULT_BASE_URL
