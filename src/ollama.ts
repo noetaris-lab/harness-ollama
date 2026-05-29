@@ -181,6 +181,7 @@ export class Ollama implements LLM, ObserverAware {
       tokens: { input: data.prompt_eval_count ?? 0, output: data.eval_count ?? 0 },
       modelId: this.model,
       stopReason: result.stopReason,
+      providerName: 'ollama',
     }
     this.observer.onEvent?.(this.stepContext, 'llm.response', event)
 

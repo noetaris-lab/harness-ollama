@@ -450,7 +450,7 @@ describe('Ollama', () => {
       expect(observer.onEvent).toHaveBeenCalledWith(
         { agentId: 'agent-1', sessionId: 'sess-1', stepName: 'step-1' },
         'llm.response',
-        { tokens: { input: 50, output: 120 }, modelId: 'llama3.2', stopReason: 'end' },
+        { tokens: { input: 50, output: 120 }, modelId: 'llama3.2', stopReason: 'end', providerName: 'ollama' },
       )
     })
 
