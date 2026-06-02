@@ -617,6 +617,198 @@ describe('Ollama', () => {
 
   })
 
+  describe('Group 5: Ollama — absent params produce no options key in request body', () => {
+
+    it('sends request body without options key when no generation params are set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2')
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      expect(parsedBody).not.toHaveProperty('options')
+      expect(parsedBody).toMatchObject({ model: 'llama3.2', stream: false })
+    })
+
+  })
+
+  describe('Group 6: Ollama — individual and combined params forwarded with correct field names', () => {
+
+    it('puts temperature under options.temperature when set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { temperature: 0.6 })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      expect(parsedBody.options).toMatchObject({ temperature: 0.6 })
+    })
+
+    it('puts maxTokens under options.num_predict when set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { maxTokens: 256 })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      const opts = parsedBody.options as Record<string, unknown>
+      expect(opts).toMatchObject({ num_predict: 256 })
+      expect(opts).not.toHaveProperty('maxTokens')
+      expect(opts).not.toHaveProperty('max_tokens')
+    })
+
+    it('puts topP under options.top_p when set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { topP: 0.9 })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      const opts = parsedBody.options as Record<string, unknown>
+      expect(opts).toMatchObject({ top_p: 0.9 })
+      expect(opts).not.toHaveProperty('topP')
+    })
+
+    it('puts topK under options.top_k when set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { topK: 50 })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      const opts = parsedBody.options as Record<string, unknown>
+      expect(opts).toMatchObject({ top_k: 50 })
+      expect(opts).not.toHaveProperty('topK')
+    })
+
+    it('puts all four params under options when all are set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { temperature: 0.7, maxTokens: 128, topP: 0.85, topK: 40 })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      expect(parsedBody.options).toEqual({ temperature: 0.7, num_predict: 128, top_p: 0.85, top_k: 40 })
+    })
+
+  })
+
+  describe('Group 7: Ollama — explicitly-undefined params excluded; options key absent when all are undefined', () => {
+
+    it('excludes options key entirely when all generation params are explicitly undefined', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { temperature: undefined, maxTokens: undefined, topP: undefined, topK: undefined })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      const fetchInit = mockFetch.mock.calls[0]?.[1] as { body: string }
+      const parsedBody = JSON.parse(fetchInit.body) as Record<string, unknown>
+      expect(parsedBody).not.toHaveProperty('options')
+    })
+
+  })
+
+  describe('Group 8: Ollama — observer event integrity with generation params', () => {
+
+    it('emits llm.response event with correct fields when generation params are set', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { role: 'assistant', content: 'reply', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 8, eval_count: 3 }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2', { temperature: 0.4, topK: 20 })
+      const onEvent = vi.fn()
+      adapter.bindObserver({ onEvent })
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      expect(onEvent).toHaveBeenCalledOnce()
+      expect(onEvent).toHaveBeenCalledWith(
+        expect.any(Object),
+        'llm.response',
+        expect.objectContaining({ tokens: { input: 8, output: 3 }, modelId: 'llama3.2', stopReason: 'end', providerName: 'ollama' }),
+      )
+    })
+
+  })
+
+  describe('Group 9: Ollama — non-2xx response throws OllamaApiError', () => {
+
+    it('throws OllamaApiError when fetch returns a non-2xx response', async () => {
+      // arrange
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        text: () => Promise.resolve('Service Unavailable'),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+      const adapter = new Ollama('llama3.2')
+
+      // act / assert
+      await expect(adapter.invoke([{ role: 'user', content: 'hello' }])).rejects.toThrow(OllamaApiError)
+      await expect(adapter.invoke([{ role: 'user', content: 'hello' }])).rejects.toMatchObject({ statusCode: 503 })
+    })
+
+  })
+
   describe('edge cases and repeated calls', () => {
 
     it('passes empty messages array through to fetch body and returns LLMResponse normally', async () => {

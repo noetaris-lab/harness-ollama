@@ -6,6 +6,26 @@ import { randomUUID } from 'node:crypto'
 export interface OllamaOptions {
   /** Base URL of the Ollama server. Defaults to `http://localhost:11434`. */
   baseUrl?: string
+  /**
+   * Sampling temperature. Higher values produce more varied output.
+   * When absent, the provider default applies.
+   */
+  temperature?: number
+  /**
+   * Maximum number of tokens to generate.
+   * When absent, the provider default applies.
+   */
+  maxTokens?: number
+  /**
+   * Top-p nucleus sampling probability.
+   * When absent, the provider default applies.
+   */
+  topP?: number
+  /**
+   * Top-k sampling — number of highest-probability tokens considered.
+   * When absent, the provider default applies.
+   */
+  topK?: number
 }
 
 /**
@@ -15,11 +35,14 @@ export interface OllamaOptions {
 export class OllamaApiError extends Error {
   /** The HTTP status code returned by the Ollama server. */
   readonly status: number
+  /** The HTTP status code returned by the Ollama server. */
+  readonly statusCode: number
 
   constructor(status: number, body: string) {
     super(`Ollama API error: HTTP ${status} — ${body}`)
     this.name = 'OllamaApiError'
     this.status = status
+    this.statusCode = status
   }
 }
 
@@ -132,15 +155,17 @@ const DEFAULT_BASE_URL = 'http://localhost:11434'
 export class Ollama implements LLM, ObserverAware {
   private readonly model: string
   private readonly baseUrl: string
+  private readonly options?: OllamaOptions
   private observer: Observer = {}
   private stepContext: StepContext = ZEROED_STEP_CONTEXT
 
   /**
    * @param model - Ollama model tag, e.g. `'llama3.2'`.
-   * @param options - Optional base URL override (defaults to `http://localhost:11434`).
+   * @param options - Optional configuration including base URL and generation params.
    */
   constructor(model: string, options?: OllamaOptions) {
     this.model = model
+    this.options = options
     this.baseUrl = options?.baseUrl ?? DEFAULT_BASE_URL
   }
 
@@ -156,11 +181,18 @@ export class Ollama implements LLM, ObserverAware {
     const translatedMessages = translateMessages(messages)
     const tools = options?.tools
 
+    const ollamaOptions: Record<string, unknown> = {}
+    if (this.options?.temperature !== undefined) ollamaOptions['temperature'] = this.options.temperature
+    if (this.options?.maxTokens !== undefined) ollamaOptions['num_predict'] = this.options.maxTokens
+    if (this.options?.topP !== undefined) ollamaOptions['top_p'] = this.options.topP
+    if (this.options?.topK !== undefined) ollamaOptions['top_k'] = this.options.topK
+
     const requestBody = {
       model: this.model,
       messages: translatedMessages,
       stream: false,
       ...(tools !== undefined ? { tools: translateTools(tools) } : {}),
+      ...(Object.keys(ollamaOptions).length > 0 ? { options: ollamaOptions } : {}),
     }
 
     const response = await fetch(`${this.baseUrl}/api/chat`, {
