@@ -1,4 +1,4 @@
-import type { LLM, Message, Tool, ToolCall, LLMResponse, LLMUsageEvent } from '@noetaris/harness-types'
+import type { LLM, Message, Tool, ToolCall, LLMResponse, LLMUsageEvent, LLMRequestEvent } from '@noetaris/harness-types'
 import type { ObserverAware, Observer, StepContext } from '@noetaris/harness'
 import { randomUUID } from 'node:crypto'
 
@@ -194,6 +194,9 @@ export class Ollama implements LLM, ObserverAware {
       ...(tools !== undefined ? { tools: translateTools(tools) } : {}),
       ...(Object.keys(ollamaOptions).length > 0 ? { options: ollamaOptions } : {}),
     }
+
+    const requestEvent: LLMRequestEvent = { modelId: this.model, providerName: 'ollama' }
+    this.observer.onEvent?.(this.stepContext, 'llm.request', requestEvent)
 
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',

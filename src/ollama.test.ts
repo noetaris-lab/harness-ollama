@@ -446,7 +446,6 @@ describe('Ollama', () => {
       await adapter.invoke([{ role: 'user', content: 'hello' }])
 
       // assert
-      expect(observer.onEvent).toHaveBeenCalledOnce()
       expect(observer.onEvent).toHaveBeenCalledWith(
         { agentId: 'agent-1', sessionId: 'sess-1', stepName: 'step-1' },
         'llm.response',
@@ -559,7 +558,7 @@ describe('Ollama', () => {
 
   describe('error propagation', () => {
 
-    it('throws OllamaApiError with status code on non-2xx response — onEvent not called', async () => {
+    it('throws OllamaApiError with status code on non-2xx response — llm.response not emitted', async () => {
       // arrange
       const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 404, text: vi.fn().mockResolvedValue('Not Found') })
       vi.stubGlobal('fetch', mockFetch)
@@ -577,7 +576,8 @@ describe('Ollama', () => {
         caught = e as OllamaApiError
       }
       expect(caught.status).toBe(404)
-      expect(observer.onEvent).not.toHaveBeenCalled()
+      const eventTypes = observer.onEvent.mock.calls.map((c: unknown[]) => c[1])
+      expect(eventTypes).not.toContain('llm.response')
     })
 
     it('throws OllamaApiError with status 500 — error includes status and body text', async () => {
@@ -601,7 +601,7 @@ describe('Ollama', () => {
       expect(caught.name).toBe('OllamaApiError')
     })
 
-    it('propagates network error from fetch unchanged — onEvent not called', async () => {
+    it('propagates network error from fetch unchanged — llm.response not emitted', async () => {
       // arrange
       const networkError = new Error('ECONNREFUSED connect ECONNREFUSED 127.0.0.1:11434')
       const mockFetch = vi.fn().mockRejectedValue(networkError)
@@ -612,7 +612,8 @@ describe('Ollama', () => {
 
       // act / assert
       await expect(adapter.invoke([{ role: 'user', content: 'hi' }])).rejects.toThrow('ECONNREFUSED')
-      expect(observer.onEvent).not.toHaveBeenCalled()
+      const eventTypes = observer.onEvent.mock.calls.map((c: unknown[]) => c[1])
+      expect(eventTypes).not.toContain('llm.response')
     })
 
   })
@@ -780,7 +781,6 @@ describe('Ollama', () => {
       await adapter.invoke([{ role: 'user', content: 'hello' }])
 
       // assert
-      expect(onEvent).toHaveBeenCalledOnce()
       expect(onEvent).toHaveBeenCalledWith(
         expect.any(Object),
         'llm.response',
@@ -805,6 +805,69 @@ describe('Ollama', () => {
       // act / assert
       await expect(adapter.invoke([{ role: 'user', content: 'hello' }])).rejects.toThrow(OllamaApiError)
       await expect(adapter.invoke([{ role: 'user', content: 'hello' }])).rejects.toMatchObject({ statusCode: 503 })
+    })
+
+  })
+
+  describe('"llm.request" emission', () => {
+
+    it('emits "llm.request" with modelId and providerName: "ollama" before fetch', async () => {
+      // arrange
+      const mockFetch = vi.fn()
+      const minimalOllamaResponse = { model: 'llama3.2', message: { role: 'assistant', content: 'ok' }, done: true }
+      mockFetch.mockResolvedValue({ ok: true, json: async () => minimalOllamaResponse })
+      vi.stubGlobal('fetch', mockFetch)
+      const mockObserver = { onEvent: vi.fn() }
+      const adapter = new Ollama('llama3.2')
+      adapter.bindObserver(mockObserver)
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hello' }])
+
+      // assert
+      expect(mockObserver.onEvent.mock.calls[0]?.[1]).toBe('llm.request')
+      expect(mockObserver.onEvent.mock.calls[0]?.[2]).toEqual({ modelId: 'llama3.2', providerName: 'ollama' })
+      expect(mockFetch).toHaveBeenCalledOnce()
+      expect(mockObserver.onEvent.mock.invocationCallOrder[0] ?? 0).toBeLessThan(mockFetch.mock.invocationCallOrder[0] ?? 0)
+    })
+
+    it('emits "llm.request" before "llm.response" on success; no optional content fields', async () => {
+      // arrange
+      const mockFetch = vi.fn()
+      const minimalOllamaResponse = { model: 'llama3.2', message: { role: 'assistant', content: 'ok' }, done: true }
+      mockFetch.mockResolvedValue({ ok: true, json: async () => minimalOllamaResponse })
+      vi.stubGlobal('fetch', mockFetch)
+      const mockObserver = { onEvent: vi.fn() }
+      const adapter = new Ollama('llama3.2')
+      adapter.bindObserver(mockObserver)
+
+      // act
+      await adapter.invoke([{ role: 'user', content: 'hi' }])
+
+      // assert
+      expect(mockObserver.onEvent).toHaveBeenCalledTimes(2)
+      expect(mockObserver.onEvent.mock.calls[0]?.[1]).toBe('llm.request')
+      expect(mockObserver.onEvent.mock.calls[1]?.[1]).toBe('llm.response')
+      expect(mockObserver.onEvent.mock.calls[0]?.[2]).not.toHaveProperty('messages')
+      expect(mockObserver.onEvent.mock.calls[0]?.[2]).not.toHaveProperty('tools')
+      expect(mockObserver.onEvent.mock.calls[1]?.[2]).not.toHaveProperty('output')
+    })
+
+    it('emits "llm.request" before fetch throw and does not emit "llm.response" on error', async () => {
+      // arrange
+      const mockFetch = vi.fn()
+      mockFetch.mockRejectedValue(new Error('ECONNREFUSED'))
+      vi.stubGlobal('fetch', mockFetch)
+      const mockObserver = { onEvent: vi.fn() }
+      const adapter = new Ollama('llama3.2')
+      adapter.bindObserver(mockObserver)
+
+      // act
+      await expect(adapter.invoke([{ role: 'user', content: 'hi' }])).rejects.toThrow('ECONNREFUSED')
+
+      // assert
+      expect(mockObserver.onEvent).toHaveBeenCalledTimes(1)
+      expect(mockObserver.onEvent.mock.calls[0]?.[1]).toBe('llm.request')
     })
 
   })
@@ -858,7 +921,7 @@ describe('Ollama', () => {
       await adapter.invoke([{ role: 'user', content: 'hello' }])
 
       // assert
-      expect(secondObserver.onEvent).toHaveBeenCalledOnce()
+      expect(secondObserver.onEvent).toHaveBeenCalled()
       expect(firstObserver.onEvent).not.toHaveBeenCalled()
     })
 

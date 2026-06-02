@@ -138,7 +138,6 @@ describe('MockOllama', () => {
       await mock.invoke([])
 
       // assert
-      expect(observer.onEvent).toHaveBeenCalledOnce()
       expect(observer.onEvent).toHaveBeenCalledWith(ctx, 'llm.response', { tokens: { input: 0, output: 0 }, modelId: 'mock', stopReason: 'end', providerName: 'mock' })
     })
 
@@ -215,6 +214,39 @@ describe('MockOllama', () => {
 
   })
 
+  describe('"llm.request" emission', () => {
+
+    it('emits "llm.request" with modelId: "mock" and providerName: "mock" before dequeue', async () => {
+      // arrange
+      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end' }
+      const adapter = new MockOllama(response)
+      const mockObserver = { onEvent: vi.fn() }
+      adapter.bindObserver(mockObserver)
+
+      // act
+      await adapter.invoke([])
+
+      // assert
+      expect(mockObserver.onEvent.mock.calls[0]?.[1]).toBe('llm.request')
+      expect(mockObserver.onEvent.mock.calls[0]?.[2]).toEqual({ modelId: 'mock', providerName: 'mock' })
+    })
+
+    it('emits "llm.request" before MockOllamaEmptyQueueError throw and does not emit "llm.response"', async () => {
+      // arrange
+      const adapter = new MockOllama()
+      const mockObserver = { onEvent: vi.fn() }
+      adapter.bindObserver(mockObserver)
+
+      // act
+      await expect(adapter.invoke([])).rejects.toThrow(MockOllamaEmptyQueueError)
+
+      // assert
+      expect(mockObserver.onEvent).toHaveBeenCalledTimes(1)
+      expect(mockObserver.onEvent.mock.calls[0]?.[1]).toBe('llm.request')
+    })
+
+  })
+
   describe('edge cases', () => {
 
     it('enqueue with a single non-array LLMResponse treats it as a one-element queue', async () => {
@@ -242,7 +274,7 @@ describe('MockOllama', () => {
       await mock.invoke([])
 
       // assert
-      expect(obs2.onEvent).toHaveBeenCalledOnce()
+      expect(obs2.onEvent).toHaveBeenCalled()
       expect(obs1.onEvent).not.toHaveBeenCalled()
     })
 
