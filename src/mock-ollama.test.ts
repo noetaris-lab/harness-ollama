@@ -13,7 +13,7 @@ describe('MockOllama', () => {
 
     it('returns the same response on every call when constructed with a single response', async () => {
       // arrange
-      const response: LLMResponse = { text: 'hello', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'hello', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama(response)
 
       // act
@@ -33,9 +33,9 @@ describe('MockOllama', () => {
 
     it('returns responses in FIFO order when constructed with three responses', async () => {
       // arrange
-      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end' }
-      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end' }
-      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end' }
+      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama([r1, r2, r3])
 
       // act
@@ -51,9 +51,9 @@ describe('MockOllama', () => {
 
     it('last response is sticky after all preceding responses are consumed', async () => {
       // arrange
-      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end' }
-      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end' }
-      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end' }
+      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama([r1, r2, r3])
       await mock.invoke([])
       await mock.invoke([])
@@ -68,8 +68,8 @@ describe('MockOllama', () => {
 
     it('calls beyond queue size all return the last response', async () => {
       // arrange
-      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end' }
-      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end' }
+      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama([r1, r2])
 
       // act
@@ -91,7 +91,7 @@ describe('MockOllama', () => {
 
     it('returns enqueued response after starting with an empty queue', async () => {
       // arrange
-      const response: LLMResponse = { text: 'added', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'added', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama()
       mock.enqueue(response)
 
@@ -104,9 +104,9 @@ describe('MockOllama', () => {
 
     it('returns all responses in order when enqueue is called after construction', async () => {
       // arrange
-      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end' }
-      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end' }
-      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end' }
+      const r1: LLMResponse = { text: 'one', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r2: LLMResponse = { text: 'two', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
+      const r3: LLMResponse = { text: 'three', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama([r1])
       mock.enqueue([r2, r3])
 
@@ -127,7 +127,7 @@ describe('MockOllama', () => {
 
     it('fires onEvent with correct event type, payload, and stopReason after invoke', async () => {
       // arrange
-      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama(response)
       const observer = { onEvent: vi.fn() }
       mock.bindObserver(observer)
@@ -143,7 +143,7 @@ describe('MockOllama', () => {
 
     it('passes the StepContext from setStepContext to onEvent', async () => {
       // arrange
-      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end' })
+      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } })
       const observer = { onEvent: vi.fn() }
       mock.bindObserver(observer)
       const ctx: StepContext = { agentId: 'agent-99', sessionId: 'sess-42', stepName: 'my-step' }
@@ -158,7 +158,7 @@ describe('MockOllama', () => {
 
     it('passes default StepContext to onEvent when setStepContext is never called', async () => {
       // arrange
-      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end' })
+      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } })
       const observer = { onEvent: vi.fn() }
       mock.bindObserver(observer)
 
@@ -171,7 +171,7 @@ describe('MockOllama', () => {
 
     it('does not throw when observer is a NOOP object with no onEvent method', async () => {
       // arrange
-      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end' })
+      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } })
       mock.bindObserver({})
 
       // act
@@ -187,7 +187,7 @@ describe('MockOllama', () => {
 
     it('lastMessages reflects the messages array from the most recent invoke', async () => {
       // arrange
-      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end' })
+      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } })
       const msgs: Message[] = [{ role: 'user', content: 'hello' }]
 
       // act
@@ -218,7 +218,7 @@ describe('MockOllama', () => {
 
     it('emits "llm.request" with modelId: "mock" and providerName: "mock" before dequeue', async () => {
       // arrange
-      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const adapter = new MockOllama(response)
       const mockObserver = { onEvent: vi.fn() }
       adapter.bindObserver(mockObserver)
@@ -252,7 +252,7 @@ describe('MockOllama', () => {
     it('enqueue with a single non-array LLMResponse treats it as a one-element queue', async () => {
       // arrange
       const mock = new MockOllama()
-      const response: LLMResponse = { text: 'single', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'single', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       mock.enqueue(response)
 
       // act
@@ -264,7 +264,7 @@ describe('MockOllama', () => {
 
     it('onEvent fires on the most recently bound observer when bindObserver is called multiple times', async () => {
       // arrange
-      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end' })
+      const mock = new MockOllama({ text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } })
       const obs1 = { onEvent: vi.fn() }
       const obs2 = { onEvent: vi.fn() }
       mock.bindObserver(obs1)
@@ -280,7 +280,7 @@ describe('MockOllama', () => {
 
     it('returns configured response and sets lastMessages to empty array when invoked with empty messages', async () => {
       // arrange
-      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end' }
+      const response: LLMResponse = { text: 'hi', toolCalls: [], stopReason: 'end', usage: { inputTokens: 0, outputTokens: 0 } }
       const mock = new MockOllama(response)
 
       // act

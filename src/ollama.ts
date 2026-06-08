@@ -26,6 +26,8 @@ export interface OllamaOptions {
    * When absent, the provider default applies.
    */
   topK?: number
+  /** Context window size for this model. Used as `contextWindowSize` in `LLMResponse.usage`. */
+  numCtx?: number
 }
 
 /**
@@ -120,7 +122,7 @@ function mapStopReason(toolCalls: OllamaToolCall[], doneReason: string | undefin
   return 'end'
 }
 
-function normalizeResponse(response: OllamaResponse): LLMResponse {
+function normalizeResponse(response: OllamaResponse): Omit<LLMResponse, 'usage'> {
   const rawToolCalls = response.message.tool_calls ?? []
   const toolCalls: ToolCall[] = rawToolCalls.map((tc) => ({
     id: randomUUID(),
@@ -155,7 +157,7 @@ const DEFAULT_BASE_URL = 'http://localhost:11434'
 export class Ollama implements LLM, ObserverAware {
   private readonly model: string
   private readonly baseUrl: string
-  private readonly options?: OllamaOptions
+  private readonly options: OllamaOptions | undefined
   private observer: Observer = {}
   private stepContext: StepContext = ZEROED_STEP_CONTEXT
 
@@ -210,13 +212,27 @@ export class Ollama implements LLM, ObserverAware {
     }
 
     const data = await response.json() as OllamaResponse
-    const result = normalizeResponse(data)
+    const normalized = normalizeResponse(data)
+    const contextWindowSize = this.options?.numCtx
+
+    const inputTokens = data.prompt_eval_count ?? 0
+    const outputTokens = data.eval_count ?? 0
+
+    const result: LLMResponse = {
+      ...normalized,
+      usage: {
+        inputTokens,
+        outputTokens,
+        ...(contextWindowSize !== undefined ? { contextWindowSize } : {}),
+      },
+    }
 
     const event: LLMUsageEvent = {
-      tokens: { input: data.prompt_eval_count ?? 0, output: data.eval_count ?? 0 },
+      tokens: { input: inputTokens, output: outputTokens },
       modelId: this.model,
       stopReason: result.stopReason,
       providerName: 'ollama',
+      ...(contextWindowSize !== undefined ? { contextWindowSize } : {}),
     }
     this.observer.onEvent?.(this.stepContext, 'llm.response', event)
 
