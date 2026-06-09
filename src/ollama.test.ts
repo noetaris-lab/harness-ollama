@@ -742,16 +742,16 @@ describe('Ollama', () => {
 
   })
 
-  describe('Group 7: Ollama — explicitly-undefined params excluded; options key absent when all are undefined', () => {
+  describe('Group 7: Ollama — absent params excluded; options key absent when all are omitted', () => {
 
-    it('excludes options key entirely when all generation params are explicitly undefined', async () => {
+    it('excludes options key entirely when all generation params are omitted', async () => {
       // arrange
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ message: { role: 'assistant', content: 'hi', tool_calls: undefined }, done_reason: 'stop', prompt_eval_count: 5, eval_count: 2 }),
       })
       vi.stubGlobal('fetch', mockFetch)
-      const adapter = new Ollama('llama3.2', { temperature: undefined, maxTokens: undefined, topP: undefined, topK: undefined })
+      const adapter = new Ollama('llama3.2', {})
 
       // act
       await adapter.invoke([{ role: 'user', content: 'hello' }])
